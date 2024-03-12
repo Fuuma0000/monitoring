@@ -1,0 +1,5 @@
+# # googleを監視する
+# - job_name: "google"
+#   static_configs:
+#     - targets:
+#         - "google.com"

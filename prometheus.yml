@@ -1,0 +1,36 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets:
+          - "prometheus:9090"
+  - job_name: "node-exporter"
+    static_configs:
+      - targets:
+          - "node-exporter:9100"
+  - job_name: "snmp-exporter"
+    static_configs:
+      - targets:
+          - "snmp-exporter:9116"
+  - job_name: "blackbox"
+    metrics_path: /probe
+    params:
+      module: [http_2xx] # Look for a HTTP 200 response.
+    static_configs:
+      - targets:
+          - http://prometheus.io # httpのやつを監視
+          - https://prometheus.io # httpsのやつを監視
+          - https://fuuma.net # 自分のやつを監視
+          - 192.168.65.3 # ローカルVMを監視
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox_exporter:9115 # The blackbox exporter's real hostname:port.
+  - job_name: "blackbox_exporter" # collect blackbox exporter's operational metrics.
+    static_configs:
+      - targets: ["blackbox_exporter:9115"]

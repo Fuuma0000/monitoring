@@ -1,0 +1,95 @@
+version: "3"
+services:
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+
+  node-exporter:
+    image: quay.io/prometheus/node-exporter
+    container_name: node-exporter
+    working_dir: /root
+    ports:
+      - 9100:9100
+    volumes:
+      - /proc:/host/proc
+      - /sys:/host/sys
+      - /:/rootfs
+
+  # snmp_exporterを追加
+  snmp_exporter:
+    image: prom/snmp-exporter
+    container_name: snmp-exporter
+    ports:
+      - 9116:9116
+    environment:
+      - SNMP_EXPORTER_CONFIG=/etc/snmp_exporter/snmp.yml
+    volumes:
+      - ./snmp.yml:/etc/snmp_exporter/snmp.yml
+
+  # blackbox_exporterを追加
+  blackbox_exporter:
+    image: prom/blackbox-exporter
+    container_name: blackbox-exporter
+    ports:
+      - 9115:9115
+    volumes:
+      - ./blackbox.yml:/etc/blackbox_exporter/blackbox.yml
+
+  # thanos-sidecar:
+  #   image: thanosio/thanos:master-2019-12-14-bec86666
+  #   volumes:
+  #     - ./thanos:/etc/thanos
+  #     - promdata:/prometheus
+  #   command:
+  #     - "sidecar"
+  #     - "--tsdb.path=/prometheus" // TSDB data directory of Prometheus
+  #     - "--prometheus.url=http://prometheus:9090"
+  #     - "--grpc-address=0.0.0.0:10091"
+  #     - "--http-address=0.0.0.0:10902"
+  #     - "--objstore.config-file=/etc/thanos/bucket_config.yaml"
+  #   depends_on:
+  #     - prometheus
+
+  # thanos-querier:
+  #   image: thanosio/thanos:master-2019-12-14-bec86666
+  #   command:
+  #     - "query"
+  #     - "--grpc-address=0.0.0.0:10091"
+  #     - "--http-address=0.0.0.0:10902"
+  #     - "--query.replica-label=dpprom"
+  #     - "--store=thanos-sidecar:10091"
+  #     - "--store=thanos-store-gateway:10091"
+  #   ports:
+  #     - 10902:10902
+  #   depends_on:
+  #     - thanos-sidecar
+
+  # thanos-store-gateway:
+  #   image: thanosio/thanos:master-2019-12-14-bec86666
+  #   volumes:
+  #     - ./thanos/:/etc/thanos/
+  #   command:
+  #     - "store"
+  #     - "--grpc-address=0.0.0.0:10091"
+  #     - "--http-address=0.0.0.0:10902"
+  #     - "--data-dir=/tmp/thanos/store"
+  #     - "--objstore.config-file=/etc/thanos/bucket_config.yaml"
+
+volumes:
+  grafana_data:
